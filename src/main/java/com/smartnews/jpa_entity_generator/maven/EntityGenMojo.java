@@ -4,7 +4,6 @@ import com.smartnews.jpa_entity_generator.CodeGenerator;
 import com.smartnews.jpa_entity_generator.config.CodeGeneratorConfig;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugin.MojoFailureException;
 
 /**
  * @goal generateAll

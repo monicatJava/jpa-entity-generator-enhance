@@ -16,4 +16,7 @@ public class Table {
     private Optional<String> schema = Optional.empty();
     private Optional<String> description = Optional.empty();
     private List<Column> columns = new ArrayList<>();
+
+    //add by zhengyi，索引信息
+    private List<IndexInfo> indexInfoList = new ArrayList<>();
 }

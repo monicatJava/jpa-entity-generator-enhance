@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.SerializationUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,7 +50,8 @@ public class CodeGenerator {
     public static void generateAll(CodeGeneratorConfig originalConfig, boolean isJpa1) throws SQLException, IOException, TemplateException {
         Path dir = Paths.get(originalConfig.getOutputDirectory() + "/" +
                 (isJpa1 ? originalConfig.getPackageNameForJpa1().replaceAll("\\.", "/") : originalConfig.getPackageName().replaceAll("\\.", "/")));
-        Files.createDirectories(dir);
+        //modify by zhengyi，使通过Gradle插件命令执行时，outputDirectory参数支持指定相对路径
+        Files.createDirectories(Paths.get(dir.toFile().getCanonicalPath()));
 
         TableMetadataFetcher metadataFetcher = new TableMetadataFetcher();
         List<String> allTableNames = metadataFetcher.getTableNames(originalConfig.getJdbcSettings());
@@ -116,12 +118,23 @@ public class CodeGenerator {
                     f.setType(fieldTypeRule.get().getTypeName());
                     f.setPrimitive(isPrimitive(f.getType()));
                 } else {
-                    f.setType(TypeConverter.toJavaType(c.getTypeCode()));
+                    //modify by zhengyi，判断是否需要修改类型
+                    String javaType = TypeConverter.toJavaType(c.getTypeCode());
+                    if (originalConfig.isModifyType()) {
+                        javaType = TypeConverter.modifyJavaType(c.getTypeCode(), javaType);
+                    }
+                    f.setType(javaType);
                     if (!c.isNullable() && config.isUsePrimitiveForNonNullField()) {
                         f.setType(TypeConverter.toPrimitiveTypeIfPossible(f.getType()));
                     }
                     f.setPrimitive(isPrimitive(f.getType()));
                 }
+
+                //add by zhengyi，增加对字段长度的处理
+                f.setLength(c.getLength());
+                //add by zhengyi，增加对decimal精度与小数位数的处理
+                f.setPrecision(c.getPrecision());
+                f.setDigits(c.getDigits());
 
                 Optional<FieldDefaultValueRule> fieldDefaultValueRule =
                         orEmptyListIfNull(config.getFieldDefaultValueRules()).stream()
@@ -145,6 +158,12 @@ public class CodeGenerator {
 
             data.setFields(fields);
             data.setPrimaryKeyFields(fields.stream().filter(CodeRenderer.RenderingData.Field::isPrimaryKey).collect(toList()));
+
+            //add by zhengyi，添加对java.io.Serializable的导入
+            List<CodeRenderer.RenderingData.Field> primaryKeyFields = data.getPrimaryKeyFields();
+            if (primaryKeyFields != null && primaryKeyFields.size() > 1) {
+                data.getImportRules().addAll(CodeGeneratorConfig.SERIALIZABLE_IMPORTS);
+            }
 
             data.setInterfaceNames(orEmptyListIfNull(config.getInterfaceRules()).stream()
                     .filter(r -> r.matches(className))
@@ -199,16 +218,23 @@ public class CodeGenerator {
 
             orEmptyListIfNull(data.getImportRules()).sort(Comparator.comparing(ImportRule::getImportValue));
 
+            //add by zhengyi，添加索引信息
+            data.setIndexInfoList(table.getIndexInfoList());
+
             String code = CodeRenderer.render("entityGen/entity.ftl", data);
 
             String filepath = config.getOutputDirectory() + "/" + data.getPackageName().replaceAll("\\.", "/") + "/" + className + ".java";
-            Path path = Paths.get(filepath);
+            //modify by zhengyi，使通过Gradle插件命令执行时，outputDirectory参数支持指定相对路径
+            Path path = Paths.get(new File(filepath).getCanonicalPath());
             if (!Files.exists(path)) {
                 Files.createFile(path);
             }
             Files.write(path, code.getBytes());
 
             log.debug("path: {}, code: {}", path, code);
+
+            //add by zhengyi，打印生成JPA Entity文件完整路径
+            System.out.println("generate file: " + path.toFile().getCanonicalPath());
         }
     }
 

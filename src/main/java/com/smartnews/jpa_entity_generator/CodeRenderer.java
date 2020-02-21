@@ -1,5 +1,6 @@
 package com.smartnews.jpa_entity_generator;
 
+import com.smartnews.jpa_entity_generator.metadata.IndexInfo;
 import com.smartnews.jpa_entity_generator.rule.Annotation;
 import com.smartnews.jpa_entity_generator.rule.ClassAnnotationRule;
 import com.smartnews.jpa_entity_generator.rule.ImportRule;
@@ -69,10 +70,19 @@ public class CodeRenderer {
         private List<Field> fields = new ArrayList<>();
         private List<Field> primaryKeyFields = new ArrayList<>();
 
+        //add by zhengyi，索引信息
+        private List<IndexInfo> indexInfoList = new ArrayList<>();
+
         @Data
         public static class Field {
             private String name;
             private String columnName;
+            //add by zhengyi，字段长度
+            private int length;
+            //add by zhengyi，decimal精度
+            private int precision;
+            //add by zhengyi，decimal小数位数
+            private int digits;
             private boolean nullable;
             private String type;
             private String comment;

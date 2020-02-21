@@ -2,6 +2,7 @@ package com.smartnews.jpa_entity_generator.config;
 
 import com.smartnews.jpa_entity_generator.rule.*;
 import com.smartnews.jpa_entity_generator.util.ResourceReader;
+import com.smartnews.jpa_entity_generator.util.TypeConverter;
 import lombok.Data;
 import org.yaml.snakeyaml.Yaml;
 
@@ -49,6 +50,11 @@ public class CodeGeneratorConfig implements Serializable {
     private static final List<ImportRule> JSR_305_PRESET_IMPORTS = Arrays.asList(
             ImportRule.createGlobal("javax.annotation.Nonnull"),
             ImportRule.createGlobal("javax.annotation.Nullable")
+    );
+
+    //add by zhengyi
+    public static final List<ImportRule> SERIALIZABLE_IMPORTS = Arrays.asList(
+            ImportRule.createGlobal("java.io.Serializable")
     );
     // ----------
 
@@ -150,6 +156,12 @@ public class CodeGeneratorConfig implements Serializable {
 
     private List<AdditionalCodeRule> additionalCodeRules = new ArrayList<>();
 
+    //add by zhengyi，用于指定是否需要修改类型
+    private boolean modifyType = false;
+
+    //add by zhengyi，用于指定修改类型的配置文件路径
+    private String modifyTypePropertiesFile;
+
     private static final Yaml YAML = new Yaml();
 
     public static CodeGeneratorConfig load(String path) throws IOException {
@@ -158,6 +170,10 @@ public class CodeGeneratorConfig implements Serializable {
                 CodeGeneratorConfig config = YAML.loadAs(reader, CodeGeneratorConfig.class);
                 config.loadEnvVariables();
                 config.setUpPresetRules();
+
+                //add by zhengyi
+                TypeConverter.init(config.getModifyTypePropertiesFile());
+
                 return config;
             }
         }

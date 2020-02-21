@@ -13,8 +13,19 @@ ${annotation.toString()}
 </#list>
 </#list>
 <#-- NOTICE: the name attribute of @Table is intentionally unquoted  -->
-@Table(name = "${tableName}")<#if primaryKeyFields.size() \gt 1>
-@IdClass(${className}.PrimaryKeys.class)</#if>
+<#if indexInfoList.size() \gt 0>
+@Table(name = "${tableName}",
+indexes = {
+<#list indexInfoList as index>
+@Index(name = "${index.name}", columnList = "${index.columnList}"<#if index.unique>, unique = true</#if>)<#if index_has_next>,</#if>
+</#list>
+})
+<#else>
+@Table(name = "${tableName}")
+</#if>
+<#if primaryKeyFields.size() \gt 1>
+@IdClass(${className}.PrimaryKeys.class)
+</#if>
 public class ${className}<#if interfaceNames.size() \gt 0> implements ${interfaceNames?join(", ")}</#if> {
 <#if primaryKeyFields.size() \gt 1>
   @Data
@@ -49,7 +60,7 @@ ${field.comment}
 <#if requireJSR305 && !field.primitive>
   <#if field.nullable>@Nullable<#else>@Nonnull</#if>
 </#if>
-  @Column(name = "<#if jpa1Compatible>`<#else>\"</#if>${field.columnName}<#if jpa1Compatible>`<#else>\"</#if>", nullable = ${field.nullable?c})
+  @Column(name = "<#if jpa1Compatible>`<#else>\"</#if>${field.columnName}<#if jpa1Compatible>`<#else>\"</#if>"<#if field.length != 0>, length = ${field.length?c}</#if><#if field.precision \gt 0>, precision = ${field.precision?c}</#if><#if field.digits \gt 0>, scale = ${field.digits?c}</#if><#if !field.nullable>, nullable = false</#if>)
   private ${field.type} ${field.name}<#if field.defaultValue??> = ${field.defaultValue}</#if>;
 </#list>
 <#list bottomAdditionalCodeList as code>

@@ -1,0 +1,28 @@
+# 连接MySQL数据库需要的驱动
+jdbcSettings:
+  url: "jdbc:mysql://127.0.0.1:3306/testdb?useunicode=true&characterEncoding=utf8&allowMultiQueries=true&useAffectedRows=true"
+  username: "test"
+  password: "123456"
+  driverClassName: "com.mysql.jdbc.Driver"
+
+# 指定生成JPA Entity的目录，可使用绝对路径或相对路径
+outputDirectory: "src/test/java"
+
+# 指定生成JPA Entity的包名
+packageName: "test_jpa.entity"
+
+tableScanMode: 'RuleBased'
+
+# 指定需要生成JPA Entity的数据库表名，支持正则表达式
+tableScanRules:
+  #  - tableNames: ["test_table", "test_table2", "test_table3"]
+  #  - tableNames: ["test_table[0-9]"]
+  #  - tableNames: ["test_table[2]", "test_table[3]"]
+  - tableNames: ["test_.*"]
+
+# 指定需要排除的JPA Entity的数据库表名，支持正则表达式
+#tableExclusionRules:
+#  - tableNames: ["test_table[0-9]"]
+
+# 指定是否需要修改类型
+modifyType: true

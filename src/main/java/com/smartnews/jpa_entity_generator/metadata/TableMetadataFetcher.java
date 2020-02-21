@@ -2,6 +2,7 @@ package com.smartnews.jpa_entity_generator.metadata;
 
 import com.smartnews.jpa_entity_generator.config.JDBCSettings;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -70,8 +71,16 @@ public class TableMetadataFetcher {
                 while (rs.next()) {
                     Column column = new Column();
                     column.setName(rs.getString("COLUMN_NAME"));
+                    //add by zhengyi，记录数据库字段信息
+                    column.setLength(rs.getInt("COLUMN_SIZE"));
                     column.setTypeCode(rs.getInt("DATA_TYPE"));
                     column.setTypeName(rs.getString("TYPE_NAME"));
+
+                    if(column.getTypeCode() == Types.DECIMAL) {
+                        //add by zhengyi，对于DECIMAL类型字段，获取decimal精度与小数位数
+                        column.setPrecision(column.getLength());
+                        column.setDigits(rs.getInt("DECIMAL_DIGITS"));
+                    }
 
                     // Oracle throws java.sql.SQLException: Invalid column name
                     boolean autoIncrement = false;
@@ -106,14 +115,63 @@ public class TableMetadataFetcher {
                     }
                     column.setPrimaryKey(primaryKey);
 
+                    //add by zhengyi，打印字段信息
+                    if(log.isDebugEnabled()) {
+                        log.debug("column info: {}", column);
+                    }
+
                     tableInfo.getColumns().add(column);
                 }
             }
+
+            //add by zhengyi，增加对索引信息的处理
+            ResultSet indexRS = databaseMeta.getIndexInfo(null, schema, table, false, true);
+            handelIndexInfo(indexRS, tableInfo.getIndexInfoList());
+
             return tableInfo;
 
         } finally {
             databaseMeta.getConnection().close();
         }
+    }
+
+    //add by zhengyi，处理索引信息
+    private static void handelIndexInfo(ResultSet indexRS, List<IndexInfo> indexInfoList) throws SQLException {
+        while (indexRS.next()) {
+            //索引名称
+            String indexName = indexRS.getString("INDEX_NAME");
+
+            //跳过主键索引处理
+            if (StringUtils.equals(indexName, "PRIMARY")) {
+                continue;
+            }
+
+            //非唯一索引
+            boolean nonUnique = indexRS.getBoolean("NON_UNIQUE");
+            //列名
+            String columnName = indexRS.getString("COLUMN_NAME");
+
+            //记录索引信息
+            addIndexInfo(indexInfoList, indexName, nonUnique, columnName);
+        }
+    }
+
+    //add by zhengyi，记录单个索引信息
+    private static void addIndexInfo(List<IndexInfo> indexInfoList, String indexName, boolean nonUnique, String columnName) {
+
+        for(IndexInfo indexInfo: indexInfoList) {
+            if(StringUtils.equals(indexInfo.getName(),indexName)) {
+                indexInfo.setColumnList(indexInfo.getColumnList()+","+columnName);
+                return;
+            }
+        }
+
+        IndexInfo indexInfo = new IndexInfo();
+        indexInfo.setName(indexName);
+        indexInfo.setUnique(!nonUnique);
+        indexInfo.setColumnList(columnName);
+
+        indexInfoList.add(indexInfo);
     }
 
     private static final String columnName(ResultSet rs) {

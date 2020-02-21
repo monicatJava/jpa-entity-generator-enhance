@@ -21,5 +21,4 @@ public class ResourceReader {
         InputStream fileResource = new FileInputStream(new File(path));
         return fileResource;
     }
-
 }

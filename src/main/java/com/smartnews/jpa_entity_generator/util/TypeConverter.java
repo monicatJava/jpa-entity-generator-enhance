@@ -1,11 +1,45 @@
 package com.smartnews.jpa_entity_generator.util;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Types;
+import java.util.Properties;
 
 /**
  * Utility to convert SQL types to Java types.
  */
+@Slf4j
 public class TypeConverter {
+
+    private static Properties modifyTypeProperties;
+
+    private static final String MODIFY_TYPE_PROPERTIES_FILE= "entityGen/jpa_modify_type.properties";
+
+    //add by zhengyi，读取配置文件中指定的需要修改的类型
+    public static void init(String modifyTypePropertiesFile) {
+
+        modifyTypeProperties = new Properties();
+
+        if(StringUtils.isNotBlank(modifyTypePropertiesFile)) {
+            try (InputStream inputStream = new FileInputStream(new File(modifyTypePropertiesFile))) {
+                modifyTypeProperties.load(inputStream);
+            } catch (Exception e) {
+                log.error("error1: ", e);
+            }
+            return;
+        }
+
+        try (InputStream inputStream = ResourceReader.getResourceAsStream(MODIFY_TYPE_PROPERTIES_FILE)) {
+            modifyTypeProperties.load(inputStream);
+        } catch (Exception e) {
+            log.error("error2: ", e);
+        }
+    }
 
     private TypeConverter() {
     }
@@ -79,6 +113,17 @@ public class TypeConverter {
             default:
                 return "String";
         }
+    }
+
+    //add by zhengyi，修改类型
+    public static String modifyJavaType(int typeCode, String javaType) {
+
+        String key = String.valueOf(typeCode);
+        String value = modifyTypeProperties.getProperty(key);
+        if (value != null && !value.isEmpty()) {
+            return value;
+        }
+        return javaType;
     }
 
     public static String toPrimitiveTypeIfPossible(String type) {

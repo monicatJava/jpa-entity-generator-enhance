@@ -1,44 +1,45 @@
 plugins {
     id 'java'
-    id 'idea'
-    id 'maven'
+    id 'maven-publish'
     id 'signing'
-    id 'com.dorongold.task-tree' version '1.3'
 }
 
-def isLocalDeployment = project.hasProperty("local")
+group = "com.github.adrninistrator"
+version = "0.0.1"
+def projectName = 'jpa-entity-generator-enhance'
+description = "${projectName}"
 
 compileJava {
     sourceCompatibility = '1.8'
 }
+
 repositories {
     mavenCentral()
 }
-configurations {
-    all*.exclude module : 'spring-boot-starter-logging'
-    providedCompile
-}
-sourceSets.main.compileClasspath += configurations.providedCompile
-sourceSets.test.compileClasspath += configurations.providedCompile
-sourceSets.test.runtimeClasspath += configurations.providedCompile
 
 dependencies {
-    compile 'com.google.guava:guava:26.0-jre'
-    compile 'org.apache.commons:commons-lang3:3.8.1'
-    compile 'org.freemarker:freemarker:2.3.28'
-    compile 'org.yaml:snakeyaml:1.23'
-    compile 'org.slf4j:slf4j-api:1.7.25'
+    implementation 'com.google.guava:guava:26.0-jre'
+    implementation 'org.apache.commons:commons-lang3:3.8.1'
+    implementation 'org.freemarker:freemarker:2.3.28'
+    implementation 'org.yaml:snakeyaml:1.23'
+    implementation 'org.slf4j:slf4j-api:1.7.25'
 
-    compileOnly 'org.projectlombok:lombok:1.18.2'
+    annotationProcessor 'org.projectlombok:lombok:1.18.12'
+    compileOnly 'org.projectlombok:lombok:1.18.12'
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 
-    providedCompile gradleApi()
-    providedCompile 'org.apache.maven:maven-plugin-api:3.5.4'
+    compileOnly gradleApi()
+    compileOnly 'org.apache.maven:maven-plugin-api:3.5.4'
 
-    testCompile 'junit:junit:4.12'
-    testCompile 'com.h2database:h2:1.4.197'
-    testCompile 'org.hibernate.javax.persistence:hibernate-jpa-2.1-api:1.0.0.Final'
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'javax.persistence:javax.persistence-api:2.2'
+    testImplementation "org.apache.logging.log4j:log4j-api:2.11.1"
+    testImplementation "org.apache.logging.log4j:log4j-core:2.11.1"
+    testImplementation "org.apache.logging.log4j:log4j-slf4j-impl:2.11.1"
+    testImplementation "org.slf4j:jcl-over-slf4j:1.7.28"
+    testImplementation "mysql:mysql-connector-java:5.1.32"
 
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.12'
     testCompileOnly 'org.projectlombok:lombok:1.18.2'
     testCompileOnly 'com.google.code.findbugs:jsr305:3.0.2'
 }
@@ -46,17 +47,26 @@ dependencies {
 sourceSets {
     main {
         java {
+            srcDir 'src/main/java'
             exclude 'com/smartnews/jpa_entity_generator/maven/**'
+        }
+
+        resources {
+            srcDir 'src/main/resources'
+        }
+    }
+
+    test {
+        java {
+            srcDir 'src/test/java'
+        }
+
+        resources {
+            srcDir 'src/test/resources'
         }
     }
 }
 
-test {
-    testLogging {
-        events "PASSED", "FAILED", "SKIPPED"
-        testLogging.showStandardStreams = true
-    }
-}
 allprojects {
     gradle.projectsEvaluated {
         tasks.withType(JavaCompile) {
@@ -70,74 +80,77 @@ allprojects {
     }
 }
 
-task javadocJar(type: Jar) {
-    classifier = 'javadoc'
-    from javadoc
-}
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
-artifacts {
-    archives javadocJar, sourcesJar
-}
 
-if (!isLocalDeployment) {
-    signing {
-        sign configurations.archives
+task sourcesJar(type: Jar) {
+    doFirst {
+        archiveClassifier.set('sources')
+        from sourceSets.main.allJava
     }
 }
 
-try {
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            pom.groupId = 'com.smartnews'
-            pom.artifactId = 'jpa-entity-generator'
-            pom.version = '0.99.8'
+task javadocJar(type: Jar) {
+    doFirst {
+        archiveClassifier.set('javadoc')
+        from javadoc.destinationDir
+    }
+}
 
-            if (isLocalDeployment) {
-                def localRepoPath = 'file://' + new File(System.getProperty('user.home'), '.m2/repository').absolutePath
-                repository(url: localRepoPath)
-                snapshotRepository(url: localRepoPath)
-            } else {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: "$System.env.SONATYPE_NEXUS_USER", password: "$System.env.SONATYPE_NEXUS_PASS")
-                }
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: "$System.env.SONATYPE_NEXUS_USER", password: "$System.env.SONATYPE_NEXUS_PASS")
-                }
-            }
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId project.group
+            artifactId project.name
+            version "${version}"
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
 
-            pom.project {
-                name 'JPA Entity Generator'
-                description 'Lombok-wired JPA entity source code generator, Gradle and Maven supported.'
-                packaging 'jar'
-                url 'https://github.com/smartnews/jpa-entity-generator'
-
-                scm {
-                    connection 'git@github.com:smartnews/jpa-entity-generator.git'
-                    developerConnection 'git@github.com:smartnews/jpa-entity-generator.git'
-                    url 'https://github.com/smartnews/jpa-entity-generator'
-                }
-
+            pom {
+                name = "jpa-entity-generator-enhance"
+                description = "Lombok-wired JPA entity source code generator, enchanced version."
+                url = "https://github.com/Adrninistrator/jpa-entity-generator-enhance"
                 licenses {
                     license {
-                        name 'The MIT License'
-                        url 'https://opensource.org/licenses/MIT'
+                        name = "The Apache License, Version 2.0"
+                        url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
                     }
                 }
-
                 developers {
                     developer {
-                        id 'seratch'
-                        name 'Kazuhiro Sera'
-                        email 'seratch@gmail.com'
+                        id = "Adrninistrator"
+                        name = "zhengyi"
+                        email = "zhengyiee@qq.com"
                     }
+                }
+                scm {
+                    connection = "scm:git:https://github.com/Adrninistrator/jpa-entity-generator-enhance.git"
+                    developerConnection = "scm:git:https://github.com/Adrninistrator/jpa-entity-generator-enhance.git"
+                    url = "https://github.com/Adrninistrator/jpa-entity-generator-enhance"
                 }
             }
         }
     }
+    repositories {
+        maven {
+            name 'sonatypeRepository'
+            url 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            credentials {
+                username = "${NEXUS_USERNAME}"
+                password = "${NEXUS_PASSWORD}"
+            }
+        }
+        maven {
+            name = 'sonatypeSnapshotRepository'
+            url = 'https://oss.sonatype.org/content/repositories/snapshots/'
+            credentials {
+                username = "${NEXUS_USERNAME}"
+                password = "${NEXUS_PASSWORD}"
+            }
+        }
+    }
 }
-} catch (MissingPropertyException e) { e.printStackTrace() }
+
+signing {
+    sign publishing.publications.mavenJava
+}
+
