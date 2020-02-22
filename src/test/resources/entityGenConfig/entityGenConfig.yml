@@ -1,4 +1,4 @@
-# 连接MySQL数据库需要的驱动
+# 连接数据库参数
 jdbcSettings:
   url: "jdbc:mysql://127.0.0.1:3306/testdb?useunicode=true&characterEncoding=utf8&allowMultiQueries=true&useAffectedRows=true"
   username: "test"
