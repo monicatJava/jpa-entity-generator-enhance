@@ -387,3 +387,5 @@ java.sql.NClob
 参考 https://docs.jboss.org/hibernate/entitymanager/3.6/reference/en/html_single/#d0e215 。
 
 hibernate-jpa-2.0-api-x.y.z.jar 是包含JPA 2.0 API的JAR，它提供了规范定义为公共API的所有接口和具体类。可以使用此JAR引导任何JPA提供程序实现。
+
+org.hibernate.javax.persistence:hibernate-jpa-2.2-api组件已更名为javax.persistence:javax.persistence-api，可使用“javax.persistence:javax.persistence-api:2.2”版本的组件。
