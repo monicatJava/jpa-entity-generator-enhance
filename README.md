@@ -1,3 +1,6 @@
+2022/3/10 gradle to maven fail
+2022/3/10 oracle 連不上
+
 # 1. 前言
 
 以下提供了根据数据库表生成JPA Entity的Java组件，项目地址为 https://github.com/Adrninistrator/jpa-entity-generator-enhance ，在原始项目 https://github.com/smartnews/jpa-entity-generator 基础上进行了优化。
